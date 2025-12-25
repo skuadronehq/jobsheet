@@ -1,8 +1,15 @@
+// Supabase Configuration
+const SUPABASE_URL = 'https://gbovcvmjgmdsulzvwdtu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_GRkK4zpu30zx4tTnLedBgw_N3wMzL5r';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // State Management
 let currentStep = 1;
-let jobs = JSON.parse(localStorage.getItem('skuadrone_jobs')) || [];
+let jobs = [];
+let pricingList = [];
+let isLoggedIn = localStorage.getItem('skuadrone_logged_in') === 'true';
 
-// Navigation
+// Navigation Constants
 const navRequest = document.getElementById('nav-request');
 const navDashboard = document.getElementById('nav-dashboard');
 const navLogin = document.getElementById('nav-login');
@@ -11,7 +18,31 @@ const viewRequest = document.getElementById('view-request');
 const viewDashboard = document.getElementById('view-dashboard');
 const viewLogin = document.getElementById('view-login');
 
-let isLoggedIn = localStorage.getItem('skuadrone_logged_in') === 'true';
+async function fetchJobs() {
+    const { data, error } = await db
+        .from('jobs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching jobs:', error);
+        return [];
+    }
+    return data;
+}
+
+async function fetchPricing() {
+    const { data, error } = await db
+        .from('pricing')
+        .select('*')
+        .order('service_name');
+
+    if (error) {
+        console.error('Error fetching pricing:', error);
+        return [];
+    }
+    return data;
+}
 
 // Theme Management
 let currentTheme = localStorage.getItem('skuadrone_theme') || 'light';
@@ -143,7 +174,7 @@ function generateReview() {
 }
 
 // Form Submission
-document.getElementById('job-form').addEventListener('submit', (e) => {
+document.getElementById('job-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const materials = [];
@@ -154,25 +185,33 @@ document.getElementById('job-form').addEventListener('submit', (e) => {
         }
     });
 
+    const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     const newJob = {
-        id: 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-        dateRequest: document.getElementById('date-request').value,
-        applicant: document.getElementById('name-applicant').value,
-        icNo: document.getElementById('ic-no').value,
-        phone: document.getElementById('phone-no').value,
-        address: document.getElementById('address').value,
-        lotNo: document.getElementById('lot-no').value,
-        blockNo: document.getElementById('block-no').value,
-        serviceDate: document.getElementById('service-date').value,
-        serviceType: document.getElementById('service-type').value,
+        id: jobId,
+        applicant_name: document.getElementById('name-applicant').value,
+        applicant_ic: document.getElementById('ic-no').value,
+        applicant_phone: document.getElementById('phone-no').value,
+        applicant_address: document.getElementById('address').value,
+        lot_no: document.getElementById('lot-no').value,
+        block_no: document.getElementById('block-no').value,
+        service_date: document.getElementById('service-date').value,
+        service_type: document.getElementById('service-type').value,
         materials: materials,
-        status: 'Pending',
-        timestamp: new Date().getTime()
+        status: 'Pending'
     };
 
-    jobs.push(newJob);
-    localStorage.setItem('skuadrone_jobs', JSON.stringify(jobs));
+    const { data, error } = await db
+        .from('jobs')
+        .insert([newJob])
+        .select();
 
+    if (error) {
+        alert('Error submitting job: ' + error.message);
+        return;
+    }
+
+    // Refresh local state and UI
+    jobs = await fetchJobs();
     alert('Job submitted successfully!');
     resetForm();
     switchView('dashboard');
@@ -234,16 +273,16 @@ function renderDashboard() {
     let pending = 0;
     let completed = 0;
 
-    jobs.sort((a, b) => b.timestamp - a.timestamp).forEach(job => {
+    jobs.forEach(job => {
         if (job.status === 'Pending') pending++;
         if (job.status === 'Approved') completed++;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
-            <td>${job.serviceDate}</td>
-            <td>${job.applicant}</td>
-            <td>${job.serviceType}</td>
+            <td>${job.service_date}</td>
+            <td>${job.applicant_name}</td>
+            <td>${job.service_type}</td>
             <td><span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></td>
             <td>
                 <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="viewJob('${job.id}')">View</button>
@@ -264,8 +303,8 @@ function syncServiceDropdown() {
     const select = document.getElementById('service-type');
     if (!select) return;
     const currentVal = select.value;
-    select.innerHTML = pricing.map(p => `<option value="${p.type}">${p.type}</option>`).join('');
-    if (pricing.some(p => p.type === currentVal)) {
+    select.innerHTML = pricingList.map(p => `<option value="${p.service_name}">${p.service_name}</option>`).join('');
+    if (pricingList.some(p => p.service_name === currentVal)) {
         select.value = currentVal;
     }
 }
@@ -277,13 +316,13 @@ function renderReports() {
 
     const processedJobs = jobs.filter(j => j.status !== 'Pending');
 
-    processedJobs.sort((a, b) => b.timestamp - a.timestamp).forEach(job => {
+    processedJobs.forEach(job => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
-            <td>${job.serviceType}</td>
-            <td>${job.applicant}</td>
-            <td>${job.approvalDate || '-'}</td>
+            <td>${job.service_type}</td>
+            <td>${job.applicant_name}</td>
+            <td>${job.approval_date || '-'}</td>
             <td><span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></td>
             <td>
                 <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="viewReport('${job.id}')">View Report</button>
@@ -328,45 +367,56 @@ function switchDashboardTab(tab) {
 }
 
 // Pricing Logic
-let defaultPricing = [
-    { type: 'Tabur Baja', rate: 15, unit: 'Beg' },
-    { type: 'Sembur Baja', rate: 20, unit: 'Btl' },
-    { type: 'Meracun', rate: 25, unit: 'Btl' },
-    { type: 'Mapping', rate: 50, unit: 'Lot' }
-];
-
-let pricing = JSON.parse(localStorage.getItem('skuadrone_pricing')) || defaultPricing;
-
 function renderPricing() {
     const body = document.getElementById('pricing-body');
+    if (!body) return;
     body.innerHTML = '';
 
-    pricing.forEach((p, index) => {
+    pricingList.forEach((p, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><input type="text" value="${p.type}" oninput="updatePricing(${index}, 'type', this.value)"></td>
-            <td><input type="number" value="${p.rate}" oninput="updatePricing(${index}, 'rate', this.value)"></td>
-            <td><input type="text" value="${p.unit}" oninput="updatePricing(${index}, 'unit', this.value)"></td>
-            <td><button class="btn-secondary" onclick="removePricing(${index})">Delete</button></td>
+            <td><input type="text" value="${p.service_name}" onchange="updatePricing('${p.id}', 'service_name', this.value)"></td>
+            <td><input type="number" value="${p.price_per_ha}" onchange="updatePricing('${p.id}', 'price_per_ha', this.value)"></td>
+            <td><input type="text" value="Hektar" disabled></td>
+            <td><button class="btn-secondary" onclick="removePricing('${p.id}')">Delete</button></td>
         `;
         body.appendChild(tr);
     });
 }
 
-function addPricingRow() {
-    pricing.push({ type: 'New Service', rate: 0, unit: 'Unit' });
-    localStorage.setItem('skuadrone_pricing', JSON.stringify(pricing));
+async function addPricingRow() {
+    const { error } = await db
+        .from('pricing')
+        .insert([{ service_name: 'New Service ' + Math.floor(Math.random() * 1000), price_per_ha: 0 }]);
+
+    if (error) alert('Error adding pricing: ' + error.message);
+    pricingList = await fetchPricing();
     renderPricing();
+    syncServiceDropdown();
 }
 
-function updatePricing(index, field, value) {
-    pricing[index][field] = field === 'rate' ? parseFloat(value) : value;
-    localStorage.setItem('skuadrone_pricing', JSON.stringify(pricing));
+async function updatePricing(id, field, value) {
+    const updateData = {};
+    updateData[field] = field === 'price_per_ha' ? parseFloat(value) : value;
+
+    const { error } = await db
+        .from('pricing')
+        .update(updateData)
+        .eq('id', id);
+
+    if (error) alert('Error updating pricing: ' + error.message);
+    pricingList = await fetchPricing();
+    syncServiceDropdown();
 }
 
-function removePricing(index) {
-    pricing.splice(index, 1);
-    localStorage.setItem('skuadrone_pricing', JSON.stringify(pricing));
+async function removePricing(id) {
+    const { error } = await db
+        .from('pricing')
+        .delete()
+        .eq('id', id);
+
+    if (error) alert('Error removing pricing: ' + error.message);
+    pricingList = await fetchPricing();
     renderPricing();
     syncServiceDropdown();
 }
@@ -382,15 +432,15 @@ function openApprovalModal(jobId) {
     header.innerText = job.status === 'Pending' ? 'Approve Job Request' : 'Job Details';
 
     const detailsDiv = document.getElementById('approval-details');
-    const pricingEntry = pricing.find(p => p.type === job.serviceType);
-    const cost = pricingEntry ? pricingEntry.rate : 0;
+    const pricingEntry = pricingList.find(p => p.service_name === job.service_type);
+    const cost = pricingEntry ? pricingEntry.price_per_ha : 0;
 
     detailsDiv.innerHTML = `
         <p><strong>ID:</strong> ${job.id}</p>
         <p><strong>Status:</strong> <span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></p>
-        <p><strong>Client:</strong> ${job.applicant}</p>
-        <p><strong>Service:</strong> ${job.serviceType}</p>
-        <p><strong>Date:</strong> ${job.serviceDate}</p>
+        <p><strong>Client:</strong> ${job.applicant_name}</p>
+        <p><strong>Service:</strong> ${job.service_type}</p>
+        <p><strong>Date:</strong> ${job.service_date}</p>
         <p><strong>Estimated Cost:</strong> RM ${cost.toFixed(2)}</p>
     `;
 
@@ -400,11 +450,11 @@ function openApprovalModal(jobId) {
     const actionsDiv = document.getElementById('approval-actions');
 
     if (job.status !== 'Pending') {
-        approverInput.value = job.approver || '';
+        approverInput.value = job.approver_name || '';
         approverInput.disabled = true;
         actionsDiv.style.display = 'none';
-        detailsDiv.innerHTML += `<p><strong>Processed By:</strong> ${job.approver}</p>`;
-        detailsDiv.innerHTML += `<p><strong>Processed Date:</strong> ${job.approvalDate}</p>`;
+        detailsDiv.innerHTML += `<p><strong>Processed By:</strong> ${job.approver_name}</p>`;
+        detailsDiv.innerHTML += `<p><strong>Processed Date:</strong> ${job.approval_date}</p>`;
     } else {
         approverInput.value = '';
         approverInput.disabled = false;
@@ -415,6 +465,20 @@ function openApprovalModal(jobId) {
     }
 
     document.getElementById('approval-modal').style.display = 'block';
+}
+
+async function uploadFile(file, bucket, path) {
+    const { data, error } = await db.storage
+        .from(bucket)
+        .upload(path, file, { upsert: true });
+
+    if (error) throw error;
+
+    const { data: urlData } = db.storage
+        .from(bucket)
+        .getPublicUrl(path);
+
+    return urlData.publicUrl;
 }
 
 function closeApprovalModal() {
@@ -429,61 +493,69 @@ async function confirmAction(status) {
         alert('Please enter approver name');
         return;
     }
+
     const job = jobs.find(j => j.id === currentApprovalJobId);
     if (!job) return;
 
-    // File handling
-    const logFile = document.getElementById('flight-log-upload').files[0];
-    const screenFile = document.getElementById('dji-screenshot-upload').files[0];
-
-    let flightLog = '';
-    let djiScreenshot = '';
-
     try {
-        if (logFile) flightLog = await readFileAsText(logFile);
-        if (screenFile) djiScreenshot = await readFileAsDataURL(screenFile);
+        let screenshot_url = job.screenshot_url;
+        let flight_log_url = job.flight_log_url;
+
+        const logFile = document.getElementById('flight-log-upload').files[0];
+        const screenFile = document.getElementById('dji-screenshot-upload').files[0];
+
+        if (logFile) {
+            flight_log_url = await uploadFile(logFile, 'proof-of-work', `logs/${job.id}_log.txt`);
+        }
+        if (screenFile) {
+            screenshot_url = await uploadFile(screenFile, 'proof-of-work', `screenshots/${job.id}_screen.png`);
+        }
+
+        const updateData = {
+            status: status,
+            approver_name: name,
+            approval_date: new Date().toLocaleDateString('ms-MY'),
+            flight_log_url: flight_log_url,
+            screenshot_url: screenshot_url
+        };
+
+        const { error } = await supabase
+            .from('jobs')
+            .update(updateData)
+            .eq('id', job.id);
+
+        if (error) throw error;
+
+        jobs = await fetchJobs();
+        renderDashboard();
+        if (typeof renderReports === 'function') renderReports();
+        closeApprovalModal();
+        alert(`Job ${status === 'Approved' ? 'diluluskan' : 'ditolak'}!`);
+
     } catch (err) {
-        alert('Error reading files. Please try again.');
-        return;
+        alert('Error processing approval: ' + err.message);
     }
-
-    job.status = status;
-    job.approver = name;
-    job.approvalDate = new Date().toLocaleDateString('en-MY');
-    job.flightLog = flightLog;
-    job.djiScreenshot = djiScreenshot;
-
-    localStorage.setItem('skuadrone_jobs', JSON.stringify(jobs));
-    renderDashboard();
-    closeApprovalModal();
 }
 
-function readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-    });
-}
-
-function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
-
-function viewReport(id) {
+async function viewReport(id) {
     const job = jobs.find(j => j.id === id);
     if (!job) return;
 
     const reportDoc = document.getElementById('report-document');
-    const pricingEntry = pricing.find(p => p.type === job.serviceType);
-    const rate = pricingEntry ? pricingEntry.rate : 0;
-    const unit = pricingEntry ? pricingEntry.unit : '';
+    const pricingEntry = pricingList.find(p => p.service_name === job.service_type);
+    const rate = pricingEntry ? pricingEntry.price_per_ha : 0;
+    const unit = 'Hektar';
+
+    // Fetch flight log content if exists
+    let flightLogText = 'No text content';
+    if (job.flight_log_url) {
+        try {
+            const response = await fetch(job.flight_log_url);
+            flightLogText = await response.text();
+        } catch (e) {
+            flightLogText = 'Error loading log file.';
+        }
+    }
 
     reportDoc.innerHTML = `
         <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 1rem; margin-bottom: 2rem;">
@@ -494,16 +566,16 @@ function viewReport(id) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
             <div>
                 <h4 style="color: var(--accent); margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border);">A. MAKLUMAT PEMOHON</h4>
-                <p><strong>Nama:</strong> ${job.applicant}</p>
-                <p><strong>IC No:</strong> ${job.icNo}</p>
-                <p><strong>Telefon:</strong> ${job.phone}</p>
-                <p><strong>Alamat:</strong> ${job.address}</p>
+                <p><strong>Nama:</strong> ${job.applicant_name}</p>
+                <p><strong>IC No:</strong> ${job.applicant_ic}</p>
+                <p><strong>Telefon:</strong> ${job.applicant_phone}</p>
+                <p><strong>Alamat:</strong> ${job.applicant_address}</p>
             </div>
             <div>
                 <h4 style="color: var(--accent); margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border);">B. BUTIRAN PERKHIDMATAN</h4>
-                <p><strong>Jenis:</strong> ${job.serviceType}</p>
-                <p><strong>Tarikh:</strong> ${job.serviceDate}</p>
-                <p><strong>Lot/Blok:</strong> ${job.lotNo || '-'} / ${job.blockNo || '-'}</p>
+                <p><strong>Jenis:</strong> ${job.service_type}</p>
+                <p><strong>Tarikh:</strong> ${job.service_date}</p>
+                <p><strong>Lot/Blok:</strong> ${job.lot_no || '-'} / ${job.block_no || '-'}</p>
             </div>
         </div>
 
@@ -533,37 +605,36 @@ function viewReport(id) {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <p><strong>Status:</strong> <span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></p>
                 <p><strong>Anggaran Kos:</strong> RM ${rate.toFixed(2)} (${unit})</p>
-                <p><strong>Diluluskan Oleh:</strong> ${job.approver}</p>
-                <p><strong>Tarikh Lulus:</strong> ${job.approvalDate}</p>
+                <p><strong>Diluluskan Oleh:</strong> ${job.approver_name}</p>
+                <p><strong>Tarikh Lulus:</strong> ${job.approval_date}</p>
             </div>
         </div>
 
-        ${job.flightLog || job.djiScreenshot ? `
+        ${job.flight_log_url || job.screenshot_url ? `
             <div style="margin-top: 2rem;">
                 <h4 style="color: var(--accent); margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border);">E. BUKTI KERJA (PROOF OF WORK)</h4>
                 <div class="attachment-grid">
-                    ${job.djiScreenshot ? `
+                    ${job.screenshot_url ? `
                         <div class="screenshot-preview">
                             <p style="font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary);">DJI Mapping Screenshot:</p>
-                            <img src="${job.djiScreenshot}" alt="DJI Screenshot">
+                            <img src="${job.screenshot_url}" alt="DJI Screenshot">
                         </div>
                     ` : ''}
-                    ${job.flightLog ? `
+                    ${job.flight_log_url ? `
                         <div class="log-preview-container">
                             <p style="font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Flight Log Report:</p>
-                            <div class="log-preview">${job.flightLog}</div>
+                            <div class="log-preview">${flightLogText}</div>
                         </div>
                     ` : ''}
                 </div>
             </div>
         ` : ''}
-
         <div style="margin-top: 3rem; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary);">
             <div style="text-align: center; width: 200px; border-top: 1px solid var(--text-secondary); padding-top: 0.5rem;">
                 Tandatangan Pemohon
             </div>
             <div style="text-align: center; width: 200px; border-top: 1px solid var(--text-secondary); padding-top: 0.5rem;">
-                Tandatangan Pelulus (${job.approver})
+                Tandatangan Pelulus (${job.approver_name || '-'})
             </div>
         </div>
     `;
@@ -575,9 +646,14 @@ function closeReportModal() {
     document.getElementById('report-modal').style.display = 'none';
 }
 
-window.onload = () => {
+window.onload = async () => {
     initTheme();
     updateNav();
+
+    // Initial data fetch
+    jobs = await fetchJobs();
+    pricingList = await fetchPricing();
+
     renderDashboard();
     renderPricing();
     syncServiceDropdown();
