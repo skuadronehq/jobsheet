@@ -190,6 +190,7 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
 
     const newJob = {
         id: jobId,
+        request_datetime: document.getElementById('date-request').value,
         applicant_type: applicantType,
         applicant_name: document.getElementById('name-applicant').value,
         applicant_ic: document.getElementById('ic-no').value,
@@ -650,9 +651,28 @@ function closeReportModal() {
     document.getElementById('report-modal').style.display = 'none';
 }
 
+// Time validation for permohonan (max 10:00 PM)
+function initDateTimeValidation() {
+    const dateInput = document.getElementById('date-request');
+    if (!dateInput) return;
+
+    dateInput.addEventListener('change', function () {
+        const selectedDateTime = new Date(this.value);
+        const hours = selectedDateTime.getHours();
+
+        // If time is after 22:00 (10:00 PM), reset to 22:00
+        if (hours > 22 || (hours === 22 && selectedDateTime.getMinutes() > 0)) {
+            alert('Waktu permohonan tidak boleh melebihi 10:00 PM. Waktu telah ditetapkan semula kepada 10:00 PM.');
+            const date = this.value.split('T')[0];
+            this.value = date + 'T22:00';
+        }
+    });
+}
+
 window.onload = async () => {
     initTheme();
     updateNav();
+    initDateTimeValidation();
 
     // Initial data fetch
     jobs = await fetchJobs();
