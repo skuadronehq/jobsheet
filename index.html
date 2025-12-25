@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skuadrone | Drone Service Job Sheet</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="logo.png" alt="SKUADRONE" id="main-logo" style="height: 50px;">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" id="nav-request" class="active">New Request</a></li>
+                    <li><a href="#" id="nav-login">Admin Login</a></li>
+                    <li><a href="#" id="nav-dashboard" style="display: none;">Dashboard</a></li>
+                    <li><a href="#" id="nav-logout" style="display: none;">Logout</a></li>
+                    <li>
+                        <button id="theme-toggle" class="btn-icon" title="Toggle Dark/Light Mode">
+                            <span id="theme-icon">🌙</span>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+
+        <main id="app-content">
+            <!-- Main Content will be injected here via JS -->
+            <section id="view-request" class="view">
+                <div class="glass-panel" style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem;">Job Service Request</h2>
+
+                    <div class="step-indicator">
+                        <div class="dot active" data-step="1"></div>
+                        <div class="dot" data-step="2"></div>
+                        <div class="dot" data-step="3"></div>
+                        <div class="dot" data-step="4"></div>
+                    </div>
+
+                    <form id="job-form">
+                        <!-- Step 1: Pemohon (Applicant) -->
+                        <div class="form-step active" id="step-1">
+                            <h3 style="margin-bottom: 2rem; color: var(--primary);">A. Maklumat Pemohon</h3>
+                            <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="input-group">
+                                    <label>Tarikh Permohonan</label>
+                                    <input type="date" id="date-request" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Nama Pemohon</label>
+                                    <input type="text" id="name-applicant" placeholder="Full Name" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Kad Pengenalan</label>
+                                    <input type="text" id="ic-no" placeholder="IC Number" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>No. Telefon</label>
+                                    <input type="tel" id="phone-no" placeholder="01X-XXXXXXX" required>
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-top: 1.5rem;">
+                                <label>Alamat</label>
+                                <textarea id="address" rows="3" placeholder="Full Address"></textarea>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next Step</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Maklumat Sawah (Farm Info) -->
+                        <div class="form-step" id="step-2">
+                            <h3 style="margin-bottom: 2rem; color: var(--primary);">B. Maklumat Sawah & Perkhidmatan
+                            </h3>
+                            <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="input-group">
+                                    <label>Nombor Lot</label>
+                                    <input type="text" id="lot-no" placeholder="Lot No.">
+                                </div>
+                                <div class="input-group">
+                                    <label>No. Blok</label>
+                                    <input type="text" id="block-no" placeholder="Block No.">
+                                </div>
+                                <div class="input-group">
+                                    <label>Tarikh Perkhidmatan Dikehendaki</label>
+                                    <input type="date" id="service-date" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Jenis Perkhidmatan</label>
+                                    <select id="service-type">
+                                        <option value="Tabur Baja">Tabur Baja</option>
+                                        <option value="Sembur Baja">Sembur Baja</option>
+                                        <option value="Tabur Benih">Tabur Benih</option>
+                                        <option value="Meracun">Meracun</option>
+                                        <option value="Mapping">Mapping</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(1)">Back</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next Step</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Operasi & Bahan (Operations & Materials) -->
+                        <div class="form-step" id="step-3">
+                            <h3 style="margin-bottom: 2rem; color: var(--primary);">D/E. Operasi & Bahan</h3>
+                            <div style="margin-bottom: 2rem;">
+                                <label>Baja / Racun yang digunakan</label>
+                                <table id="materials-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Quantity (Beg/Btl)</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="materials-body">
+                                        <tr>
+                                            <td><input type="text" placeholder="e.g. NPK1"></td>
+                                            <td><input type="number" placeholder="0"></td>
+                                            <td><button type="button" class="btn-secondary" style="padding: 0.5rem;"
+                                                    onclick="removeRow(this)">X</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <button type="button" class="btn btn-secondary" style="margin-top: 1rem; width: 100%;"
+                                    onclick="addRow()">+ Add Material</button>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Back</button>
+                                <button type="button" class="btn btn-primary" onclick="nextStep(4)">Review &
+                                    Submit</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Summary -->
+                        <div class="form-step" id="step-4">
+                            <h3 style="margin-bottom: 2rem; color: var(--primary);">Review Your Request</h3>
+                            <div id="review-content"
+                                style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+                                <!-- Injected via JS -->
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="button" class="btn btn-secondary" onclick="prevStep(3)">Back</button>
+                                <button type="submit" class="btn btn-primary">Confirm Submission</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section id="view-login" class="view" style="display: none;">
+                <div class="glass-panel" style="padding: 3rem; max-width: 450px; margin: 4rem auto;">
+                    <h2 style="margin-bottom: 2rem; text-align: center;">Approver Login</h2>
+                    <form id="login-form">
+                        <div class="input-group">
+                            <label>Username</label>
+                            <input type="text" id="login-username" required placeholder="Enter username">
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" required placeholder="Enter password">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Sign
+                            In</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="view-dashboard" class="view" style="display: none;">
+                <div class="stats-grid">
+                    <div class="glass-panel stat-card">
+                        <label>Total Jobs</label>
+                        <div class="stat-value" id="stat-total">0</div>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <label>Pending Approval</label>
+                        <div class="stat-value" style="color: #f59e0b;" id="stat-pending">0</div>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <label>Completed</label>
+                        <div class="stat-value" style="color: #10b981;" id="stat-completed">0</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem;">Job Management Dashboard</h2>
+                    <div class="tabs"
+                        style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">
+                        <button class="nav-tab active" onclick="switchDashboardTab('jobs')">Jobs List</button>
+                        <button class="nav-tab" onclick="switchDashboardTab('pricing')">Pricing Schedule</button>
+                        <button class="nav-tab" onclick="switchDashboardTab('reports')">Reports</button>
+                    </div>
+
+                    <div id="tab-jobs">
+                        <table id="jobs-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref ID</th>
+                                    <th>Date</th>
+                                    <th>Client</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobs-body">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="tab-pricing" style="display: none;">
+                        <table id="pricing-table">
+                            <thead>
+                                <tr>
+                                    <th>Service Type</th>
+                                    <th>Base Rate (RM)</th>
+                                    <th>Unit</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricing-body">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-secondary" style="margin-top: 1rem; width: 100%;"
+                            onclick="addPricingRow()">+ Add New Rate</button>
+                    </div>
+
+                    <div id="tab-reports" style="display: none;">
+                        <table id="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref ID</th>
+                                    <th>Service</th>
+                                    <th>Client</th>
+                                    <th>Completed Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-body">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Approval Modal -->
+    <div id="approval-modal" class="modal-overlay">
+        <div class="glass-panel modal-content">
+            <div class="modal-header">
+                <h3>Approve Job Request</h3>
+                <span class="modal-close" onclick="closeApprovalModal()">&times;</span>
+            </div>
+            <div id="approval-details" class="approval-info">
+                <!-- Injected via JS -->
+            </div>
+            <div class="input-group">
+                <label>Estimated Cost (RM)</label>
+                <div id="approval-cost" class="cost-display">0.00</div>
+            </div>
+            <div class="input-group">
+                <label>Approver Name</label>
+                <input type="text" id="approver-name" placeholder="Enter your name">
+            </div>
+            <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="input-group">
+                    <label>Flight Log (.txt)</label>
+                    <input type="file" id="flight-log-upload" accept=".txt">
+                </div>
+                <div class="input-group">
+                    <label>DJI Screenshot</label>
+                    <input type="file" id="dji-screenshot-upload" accept="image/*">
+                </div>
+            </div>
+            <div id="approval-actions" style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="confirmAction('Rejected')">Reject</button>
+                <button class="btn btn-primary" style="flex: 2;" onclick="confirmAction('Approved')">Approve
+                    Job</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="modal-overlay">
+        <div class="glass-panel modal-content" style="max-width: 800px;">
+            <div class="modal-header no-print">
+                <h3>Job Service Report</h3>
+                <span class="modal-close" onclick="closeReportModal()">&times;</span>
+            </div>
+            <div id="report-document" class="report-paper">
+                <!-- Combined Job + Approval info injected via JS -->
+            </div>
+            <div class="modal-footer no-print"
+                style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                <button class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+                <button class="btn btn-primary" onclick="window.print()">Print Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
