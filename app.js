@@ -186,8 +186,11 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
     });
 
     const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
+
     const newJob = {
         id: jobId,
+        applicant_type: applicantType,
         applicant_name: document.getElementById('name-applicant').value,
         applicant_ic: document.getElementById('ic-no').value,
         applicant_phone: document.getElementById('phone-no').value,
@@ -210,11 +213,11 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
         return;
     }
 
-    // Refresh local state and UI
+    // Refresh local state and reset form to beginning
     jobs = await fetchJobs();
-    alert('Job submitted successfully!');
+    alert('Permohonan berjaya dihantar!');
     resetForm();
-    switchView('dashboard');
+    switchView('request');
 });
 
 function resetForm() {
@@ -281,6 +284,7 @@ function renderDashboard() {
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
             <td>${job.service_date}</td>
+            <td><span class="badge" style="background: ${job.applicant_type === 'Ketua Blok' ? 'var(--accent)' : 'var(--primary)'}; color: #0f172a;">${job.applicant_type || 'Individu'}</span></td>
             <td>${job.applicant_name}</td>
             <td>${job.service_type}</td>
             <td><span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></td>

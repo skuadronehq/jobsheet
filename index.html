@@ -50,6 +50,24 @@
                         <!-- Step 1: Pemohon (Applicant) -->
                         <div class="form-step active" id="step-1">
                             <h3 style="margin-bottom: 2rem; color: var(--primary);">A. Maklumat Pemohon</h3>
+
+                            <!-- Applicant Type Selector -->
+                            <div class="input-group" style="margin-bottom: 1.5rem;">
+                                <label>Jenis Pemohon</label>
+                                <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="radio" name="applicant-type" id="type-individu" value="Individu"
+                                            checked style="width: auto;">
+                                        <span>Individu</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="radio" name="applicant-type" id="type-ketua-blok"
+                                            value="Ketua Blok" style="width: auto;">
+                                        <span>Ketua Blok</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                                 <div class="input-group">
                                     <label>Tarikh Permohonan</label>
@@ -208,6 +226,7 @@
                                 <tr>
                                     <th>Ref ID</th>
                                     <th>Date</th>
+                                    <th>Jenis</th>
                                     <th>Client</th>
                                     <th>Service</th>
                                     <th>Status</th>
