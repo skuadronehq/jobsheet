@@ -169,6 +169,8 @@ function generateReview() {
         <p><strong>Date:</strong> ${document.getElementById('service-date').value}</p>
         <p><strong>Service:</strong> ${document.getElementById('service-type').value}</p>
         <p><strong>Lot No:</strong> ${document.getElementById('lot-no').value || '-'}</p>
+        <p><strong>Jenis Tanaman:</strong> ${document.getElementById('crop-type').value || '-'}</p>
+        <p><strong>Variety:</strong> ${document.getElementById('variety').value || '-'}</p>
         <p><strong>Materials:</strong> ${materials.join(', ') || 'None'}</p>
     `;
 }
@@ -198,6 +200,8 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
         applicant_address: document.getElementById('address').value,
         lot_no: document.getElementById('lot-no').value,
         block_no: document.getElementById('block-no').value,
+        jenis_tanaman: document.getElementById('crop-type').value,
+        variety: document.getElementById('variety').value,
         service_date: document.getElementById('service-date').value,
         service_type: document.getElementById('service-type').value,
         materials: materials,
@@ -581,6 +585,8 @@ async function viewReport(id) {
                 <p><strong>Jenis:</strong> ${job.service_type}</p>
                 <p><strong>Tarikh:</strong> ${job.service_date}</p>
                 <p><strong>Lot/Blok:</strong> ${job.lot_no || '-'} / ${job.block_no || '-'}</p>
+                <p><strong>Jenis Tanaman:</strong> ${job.jenis_tanaman || '-'}</p>
+                <p><strong>Variety:</strong> ${job.variety || '-'}</p>
             </div>
         </div>
 
