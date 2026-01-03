@@ -216,14 +216,28 @@ function generateReview() {
         }
     });
 
+    const serviceType = document.getElementById('service-type').value;
+    const area = parseFloat(document.getElementById('total-area').value) || 0;
+    const team = document.getElementById('involved-team').value || '-';
+
+    // Find rate from pricingList
+    const pricing = pricingList.find(p => p.service_name === serviceType);
+    const rate = pricing ? pricing.price_per_ha : 0;
+    const totalPrice = area * rate;
+
     reviewContent.innerHTML = `
         <p><strong>Applicant:</strong> ${document.getElementById('name-applicant').value}</p>
         <p><strong>Date:</strong> ${document.getElementById('service-date').value}</p>
-        <p><strong>Service:</strong> ${document.getElementById('service-type').value}</p>
+        <p><strong>Service:</strong> ${serviceType} (Rate: RM ${rate}/Ha)</p>
+        <p><strong>Keluasan:</strong> ${area} Hektar</p>
         <p><strong>Lot No:</strong> ${document.getElementById('lot-no').value || '-'}</p>
         <p><strong>Jenis Tanaman:</strong> ${document.getElementById('crop-type').value || '-'}</p>
         <p><strong>Variety:</strong> ${document.getElementById('variety').value || '-'}</p>
+        <p><strong>Team Terlibat:</strong> ${team}</p>
         <p><strong>Materials:</strong> ${materials.join(', ') || 'None'}</p>
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--accent); font-size: 1.2rem;">
+            <strong>Jumlah Harga Job Ini: RM ${totalPrice.toFixed(2)}</strong>
+        </div>
     `;
 }
 
@@ -242,6 +256,12 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
     const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
 
+    const serviceType = document.getElementById('service-type').value;
+    const area = parseFloat(document.getElementById('total-area').value) || 0;
+    const pricing = pricingList.find(p => p.service_name === serviceType);
+    const rate = pricing ? pricing.price_per_ha : 0;
+    const totalPrice = area * rate;
+
     const newJob = {
         id: jobId,
         request_datetime: document.getElementById('date-request').value,
@@ -254,8 +274,11 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
         block_no: document.getElementById('block-no').value,
         jenis_tanaman: document.getElementById('crop-type').value,
         variety: document.getElementById('variety').value,
+        total_area: area,
+        involved_team: document.getElementById('involved-team').value,
+        total_price: totalPrice,
         service_date: document.getElementById('service-date').value,
-        service_type: document.getElementById('service-type').value,
+        service_type: serviceType,
         materials: materials,
         status: 'Pending'
     };
@@ -634,6 +657,9 @@ async function viewReport(id) {
                 <p><strong>Lot/Blok:</strong> ${job.lot_no || '-'} / ${job.block_no || '-'}</p>
                 <p><strong>Jenis Tanaman:</strong> ${job.jenis_tanaman || '-'}</p>
                 <p><strong>Variety:</strong> ${job.variety || '-'}</p>
+                <p><strong>Keluasan:</strong> ${job.total_area || '0'} Hektar</p>
+                <p><strong>Team Terlibat:</strong> ${job.involved_team || '-'}</p>
+                <p style="font-size: 1.1rem; color: var(--primary); margin-top: 1rem;"><strong>JUMLAH HARGA: RM ${(job.total_price || 0).toFixed(2)}</strong></p>
             </div>
         </div>
 
