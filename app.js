@@ -9,6 +9,19 @@ let jobs = [];
 let pricingList = [];
 let isLoggedIn = localStorage.getItem('skuadrone_logged_in') === 'true';
 
+// Dynamic Service Configuration
+const serviceConfig = {
+    'TABUR BAJA 20KG': { unit: 'KG', defaultMaterials: ['Baja Campuran', 'Baja Urea'] },
+    'TABUR BAJA 25-30KG': { unit: 'KG', defaultMaterials: ['Baja Campuran', 'Baja Urea'] },
+    'TABUR BENIH PADI': { unit: 'BEG', defaultMaterials: ['Benih Padi MR297'] },
+    'RACUN ULAT': { unit: 'ML', defaultMaterials: ['Racun Ulat A', 'Racun Ulat B'] },
+    'RACUN SIPUT': { unit: 'ML', defaultMaterials: ['Racun Siput A', 'Racun Siput B'] },
+    'RACUN RUMPUT': { unit: 'ML', defaultMaterials: ['Racun Rumput A', 'Racun Rumput B'] },
+    'RACUN RUMPUT DALAM PADI': { unit: 'ML', defaultMaterials: ['Racun Rumput A', 'Racun Rumput B'] },
+    'TABUR KAPUR BUTIR': { unit: 'KG', defaultMaterials: ['Kapur Butir'] },
+    'SEMBUR KAPUR CECAIR': { unit: 'ML', defaultMaterials: ['Kapur Cecair'] }
+};
+
 // Navigation Constants
 const navRequest = document.getElementById('nav-request');
 const navDashboard = document.getElementById('nav-dashboard');
@@ -122,6 +135,10 @@ function nextStep(step) {
     document.getElementById(`step-${currentStep}`).classList.add('active');
     document.querySelector(`.dot[data-step="${currentStep}"]`).classList.add('active');
 
+    if (currentStep === 3) {
+        populateMaterialsStep();
+    }
+
     if (currentStep === 4) {
         generateReview();
     }
@@ -137,13 +154,48 @@ function prevStep(step) {
     document.querySelector(`.dot[data-step="${currentStep}"]`).classList.add('active');
 }
 
+function populateMaterialsStep() {
+    const serviceType = document.getElementById('service-type').value;
+    const config = serviceConfig[serviceType] || { unit: 'Beg/Btl', defaultMaterials: [] };
+
+    // Update Header
+    document.getElementById('unit-header').innerText = `Quantity (${config.unit})`;
+
+    // Update Datalist
+    const datalist = document.getElementById('material-suggestions');
+    if (datalist) {
+        datalist.innerHTML = config.defaultMaterials.map(m => `<option value="${m}">`).join('');
+    }
+
+    // Clear and fill table
+    const tbody = document.getElementById('materials-body');
+    tbody.innerHTML = '';
+
+    if (config.defaultMaterials.length > 0) {
+        config.defaultMaterials.forEach(material => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" placeholder="e.g. NPK1" value="${material}" list="material-suggestions"></td>
+                <td><input type="number" placeholder="Value in ${config.unit}"></td>
+                <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeRow(this)">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        addRow();
+    }
+}
+
 // Material Table Logic
 function addRow() {
+    const serviceType = document.getElementById('service-type').value;
+    const config = serviceConfig[serviceType] || { unit: 'Beg/Btl' };
+
     const tbody = document.getElementById('materials-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" placeholder="Item Name"></td>
-        <td><input type="number" placeholder="0"></td>
+        <td><input type="text" placeholder="Item Name" list="material-suggestions"></td>
+        <td><input type="number" placeholder="Value in ${config.unit}"></td>
         <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeRow(this)">X</button></td>
     `;
     tbody.appendChild(tr);
@@ -227,13 +279,8 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
 
 function resetForm() {
     document.getElementById('job-form').reset();
-    document.getElementById('materials-body').innerHTML = `
-        <tr>
-            <td><input type="text" placeholder="e.g. NPK1"></td>
-            <td><input type="number" placeholder="0"></td>
-            <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeRow(this)">X</button></td>
-        </tr>
-    `;
+    document.getElementById('materials-body').innerHTML = '';
+    addRow();
     prevStep(1);
 }
 
