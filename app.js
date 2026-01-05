@@ -7,6 +7,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentStep = 1;
 let jobs = [];
 let pricingList = [];
+let regionsList = [];
 let isLoggedIn = localStorage.getItem('skuadrone_logged_in') === 'true';
 
 // Dynamic Service Configuration
@@ -21,6 +22,8 @@ const serviceConfig = {
     'TABUR KAPUR BUTIR': { unit: 'KG', defaultMaterials: ['Kapur Butir'] },
     'SEMBUR KAPUR CECAIR': { unit: 'ML', defaultMaterials: ['Kapur Cecair'] }
 };
+
+
 
 // Navigation Constants
 const navRequest = document.getElementById('nav-request');
@@ -52,6 +55,19 @@ async function fetchPricing() {
 
     if (error) {
         console.error('Error fetching pricing:', error);
+        return [];
+    }
+    return data;
+}
+
+async function fetchRegions() {
+    const { data, error } = await db
+        .from('regions')
+        .select('*')
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching regions:', error);
         return [];
     }
     return data;
@@ -114,6 +130,52 @@ function switchView(view) {
     } else if (view === 'login') {
         viewLogin.style.display = 'block';
         navLogin.classList.add('active');
+    }
+}
+
+function handleLocationChange() {
+    const locationName = document.getElementById('location-select').value;
+    const region = regionsList.find(r => r.name === locationName);
+    const areaLabel = document.getElementById('area-label');
+    const areaInput = document.getElementById('total-area');
+
+    if (region) {
+        areaLabel.innerText = `Keluasan (${region.unit})`;
+        areaInput.placeholder = region.unit === 'Hektar' ? 'Contoh: 2.5' : 'Contoh: 3.5';
+    }
+}
+
+function getRate(serviceType, locationName) {
+    const region = regionsList.find(r => r.name === locationName);
+
+    // Safety check: if no region selected/found, try to find a global price or default to 0
+    if (!region) {
+        const pricing = pricingList.find(p => p.service_name === serviceType && !p.region_id);
+        return { rate: pricing ? (pricing.price_per_ha || 0) : 0, unit: 'Hektar' };
+    }
+
+    const pricing = pricingList.find(p => p.service_name === serviceType && p.region_id === region.id);
+
+    // If no specific price found for this region, alert or log it
+    if (!pricing) {
+        console.warn(`No price found for ${serviceType} in region ${locationName}. Defaulting to 0.`);
+    }
+
+    return {
+        rate: pricing ? (pricing.price_per_ha || 0) : 0,
+        unit: region.unit || 'Hektar'
+    };
+}
+
+function populateLocationSelectors() {
+    const selector = document.getElementById('location-select');
+    const pricingSelector = document.getElementById('pricing-region-select');
+
+    if (selector) {
+        selector.innerHTML = regionsList.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+    }
+    if (pricingSelector) {
+        pricingSelector.innerHTML = regionsList.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
     }
 }
 
@@ -219,17 +281,16 @@ function generateReview() {
     const serviceType = document.getElementById('service-type').value;
     const area = parseFloat(document.getElementById('total-area').value) || 0;
     const team = document.getElementById('involved-team').value || '-';
-
-    // Find rate from pricingList
-    const pricing = pricingList.find(p => p.service_name === serviceType);
-    const rate = pricing ? pricing.price_per_ha : 0;
+    const location = document.getElementById('location-select').value;
+    const { rate, unit } = getRate(serviceType, location);
     const totalPrice = area * rate;
 
     reviewContent.innerHTML = `
+        <p><strong>Lokasi:</strong> ${location}</p>
         <p><strong>Applicant:</strong> ${document.getElementById('name-applicant').value}</p>
         <p><strong>Date:</strong> ${document.getElementById('service-date').value}</p>
-        <p><strong>Service:</strong> ${serviceType} (Rate: RM ${rate}/Ha)</p>
-        <p><strong>Keluasan:</strong> ${area} Hektar</p>
+        <p><strong>Service:</strong> ${serviceType} (Rate: RM ${rate}/${unit})</p>
+        <p><strong>Keluasan:</strong> ${area} ${unit}</p>
         <p><strong>Lot No:</strong> ${document.getElementById('lot-no').value || '-'}</p>
         <p><strong>Jenis Tanaman:</strong> ${document.getElementById('crop-type').value || '-'}</p>
         <p><strong>Variety:</strong> ${document.getElementById('variety').value || '-'}</p>
@@ -237,6 +298,7 @@ function generateReview() {
         <p><strong>Materials:</strong> ${materials.join(', ') || 'None'}</p>
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--accent); font-size: 1.2rem;">
             <strong>Jumlah Harga Job Ini: RM ${totalPrice.toFixed(2)}</strong>
+            ${rate === 0 ? '<br><small style="color: #ff6b6b">⚠️ Price not set for this region/service.</small>' : ''}
         </div>
     `;
 }
@@ -255,15 +317,17 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
 
     const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
+    const location = document.getElementById('location-select').value;
 
     const serviceType = document.getElementById('service-type').value;
     const area = parseFloat(document.getElementById('total-area').value) || 0;
-    const pricing = pricingList.find(p => p.service_name === serviceType);
-    const rate = pricing ? pricing.price_per_ha : 0;
+
+    const { rate } = getRate(serviceType, location);
     const totalPrice = area * rate;
 
     const newJob = {
         id: jobId,
+        location: location,
         request_datetime: document.getElementById('date-request').value,
         applicant_type: applicantType,
         applicant_name: document.getElementById('name-applicant').value,
@@ -358,7 +422,7 @@ function renderDashboard() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
-            <td>${job.service_date}</td>
+            <td>${job.service_date} <br><small style="color: var(--text-secondary)">${job.location || 'Selangor'}</small></td>
             <td><span class="badge" style="background: ${job.applicant_type === 'Ketua Blok' ? 'var(--accent)' : 'var(--primary)'}; color: #0f172a;">${job.applicant_type || 'Individu'}</span></td>
             <td>${job.applicant_name}</td>
             <td>${job.service_type}</td>
@@ -382,8 +446,9 @@ function syncServiceDropdown() {
     const select = document.getElementById('service-type');
     if (!select) return;
     const currentVal = select.value;
-    select.innerHTML = pricingList.map(p => `<option value="${p.service_name}">${p.service_name}</option>`).join('');
-    if (pricingList.some(p => p.service_name === currentVal)) {
+    const uniqueServices = [...new Set(pricingList.map(p => p.service_name))];
+    select.innerHTML = uniqueServices.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (uniqueServices.includes(currentVal)) {
         select.value = currentVal;
     }
 }
@@ -399,7 +464,7 @@ function renderReports() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
-            <td>${job.service_type}</td>
+            <td>${job.service_type} <br><small style="color: var(--text-secondary)">${job.location || 'Selangor'}</small></td>
             <td>${job.applicant_name}</td>
             <td>${job.approval_date || '-'}</td>
             <td><span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></td>
@@ -419,28 +484,33 @@ function viewJob(id) {
 function switchDashboardTab(tab) {
     const jobsTab = document.getElementById('tab-jobs');
     const pricingTab = document.getElementById('tab-pricing');
+    const regionsTab = document.getElementById('tab-regions');
     const reportsTab = document.getElementById('tab-reports');
     const tabs = document.querySelectorAll('.nav-tab');
 
     tabs.forEach(t => t.classList.remove('active'));
 
+    // Hide all
+    if (jobsTab) jobsTab.style.display = 'none';
+    if (pricingTab) pricingTab.style.display = 'none';
+    if (regionsTab) regionsTab.style.display = 'none';
+    if (reportsTab) reportsTab.style.display = 'none';
+
     if (tab === 'jobs') {
         jobsTab.style.display = 'block';
-        pricingTab.style.display = 'none';
-        reportsTab.style.display = 'none';
         tabs[0].classList.add('active');
         renderDashboard();
     } else if (tab === 'pricing') {
-        jobsTab.style.display = 'none';
         pricingTab.style.display = 'block';
-        reportsTab.style.display = 'none';
         tabs[1].classList.add('active');
         renderPricing();
-    } else {
-        jobsTab.style.display = 'none';
-        pricingTab.style.display = 'none';
-        reportsTab.style.display = 'block';
+    } else if (tab === 'regions') {
+        regionsTab.style.display = 'block';
         tabs[2].classList.add('active');
+        renderRegions();
+    } else {
+        reportsTab.style.display = 'block';
+        tabs[3].classList.add('active');
         renderReports();
     }
 }
@@ -448,15 +518,21 @@ function switchDashboardTab(tab) {
 // Pricing Logic
 function renderPricing() {
     const body = document.getElementById('pricing-body');
-    if (!body) return;
+    const regionId = document.getElementById('pricing-region-select').value;
+    if (!body || !regionId) return;
     body.innerHTML = '';
 
-    pricingList.forEach((p, index) => {
+    const selectedRegion = regionsList.find(r => r.id === regionId);
+    const unit = selectedRegion ? selectedRegion.unit : 'Unit';
+
+    const filteredPricing = pricingList.filter(p => p.region_id === regionId);
+
+    filteredPricing.forEach((p, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><input type="text" value="${p.service_name}" onchange="updatePricing('${p.id}', 'service_name', this.value)"></td>
             <td><input type="number" value="${p.price_per_ha}" onchange="updatePricing('${p.id}', 'price_per_ha', this.value)"></td>
-            <td><input type="text" value="Hektar" disabled></td>
+            <td><input type="text" value="${unit}" disabled></td>
             <td><button class="btn-secondary" onclick="removePricing('${p.id}')">Delete</button></td>
         `;
         body.appendChild(tr);
@@ -464,9 +540,16 @@ function renderPricing() {
 }
 
 async function addPricingRow() {
+    const regionId = document.getElementById('pricing-region-select').value;
+    if (!regionId) return alert('Please select a region first');
+
     const { error } = await db
         .from('pricing')
-        .insert([{ service_name: 'New Service ' + Math.floor(Math.random() * 1000), price_per_ha: 0 }]);
+        .insert([{
+            service_name: 'New Service',
+            price_per_ha: 0,
+            region_id: regionId
+        }]);
 
     if (error) alert('Error adding pricing: ' + error.message);
     pricingList = await fetchPricing();
@@ -489,6 +572,7 @@ async function updatePricing(id, field, value) {
 }
 
 async function removePricing(id) {
+    if (!confirm('Are you sure you want to delete this pricing rate?')) return;
     const { error } = await db
         .from('pricing')
         .delete()
@@ -498,6 +582,61 @@ async function removePricing(id) {
     pricingList = await fetchPricing();
     renderPricing();
     syncServiceDropdown();
+}
+
+// Regions Logic
+function renderRegions() {
+    const body = document.getElementById('regions-body');
+    if (!body) return;
+    body.innerHTML = '';
+
+    regionsList.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" value="${r.name}" onchange="updateRegion('${r.id}', 'name', this.value)"></td>
+            <td><input type="text" value="${r.unit}" onchange="updateRegion('${r.id}', 'unit', this.value)" placeholder="Hektar / Relong"></td>
+            <td><button class="btn-secondary" onclick="removeRegion('${r.id}')">Delete</button></td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+async function addRegionRow() {
+    const { error } = await db
+        .from('regions')
+        .insert([{ name: 'New Region', unit: 'Hektar' }]);
+
+    if (error) alert('Error adding region: ' + error.message);
+    regionsList = await fetchRegions();
+    populateLocationSelectors();
+    renderRegions();
+}
+
+async function updateRegion(id, field, value) {
+    const updateData = {};
+    updateData[field] = value;
+
+    const { error } = await db
+        .from('regions')
+        .update(updateData)
+        .eq('id', id);
+
+    if (error) alert('Error updating region: ' + error.message);
+    regionsList = await fetchRegions();
+    populateLocationSelectors();
+}
+
+async function removeRegion(id) {
+    if (!confirm('Are you sure you want to delete this region? All associated prices will remain in the database but may become inaccessible.')) return;
+    const { error } = await db
+        .from('regions')
+        .delete()
+        .eq('id', id);
+
+    if (error) alert('Error removing region: ' + error.message);
+    regionsList = await fetchRegions();
+    populateLocationSelectors();
+    renderRegions();
 }
 
 // Initial render
@@ -511,19 +650,27 @@ function openApprovalModal(jobId) {
     header.innerText = job.status === 'Pending' ? 'Approve Job Request' : 'Job Details';
 
     const detailsDiv = document.getElementById('approval-details');
-    const pricingEntry = pricingList.find(p => p.service_name === job.service_type);
-    const cost = pricingEntry ? pricingEntry.price_per_ha : 0;
+    const { rate, unit } = getRate(job.service_type, job.location);
+    const cost = rate; // The cost in modal seems to be just the rate per unit? 
+    // Wait, the modal says "Estimated Cost (RM)". In the original it was using price_per_ha.
+    // Let's check the submission logic. submission stores total_price = area * rate.
+    // The modal should probably show the total price or the rate.
+    // Original: const cost = pricingEntry ? pricingEntry.price_per_ha : 0;
+    // It seems it was showing the rate per Hektar.
 
     detailsDiv.innerHTML = `
         <p><strong>ID:</strong> ${job.id}</p>
         <p><strong>Status:</strong> <span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></p>
+        <p><strong>Lokasi:</strong> ${job.location || 'Selangor'}</p>
         <p><strong>Client:</strong> ${job.applicant_name}</p>
         <p><strong>Service:</strong> ${job.service_type}</p>
         <p><strong>Date:</strong> ${job.service_date}</p>
-        <p><strong>Estimated Cost:</strong> RM ${cost.toFixed(2)}</p>
+        <p><strong>Keluasan:</strong> ${job.total_area} ${unit}</p>
+        <p><strong>Rate:</strong> RM ${rate.toFixed(2)}/${unit}</p>
+        <p><strong>Estimated Total:</strong> RM ${(job.total_area * rate).toFixed(2)}</p>
     `;
 
-    document.getElementById('approval-cost').innerText = cost.toFixed(2);
+    document.getElementById('approval-cost').innerText = (job.total_area * rate).toFixed(2);
 
     const approverInput = document.getElementById('approver-name');
     const actionsDiv = document.getElementById('approval-actions');
@@ -621,9 +768,7 @@ async function viewReport(id) {
     if (!job) return;
 
     const reportDoc = document.getElementById('report-document');
-    const pricingEntry = pricingList.find(p => p.service_name === job.service_type);
-    const rate = pricingEntry ? pricingEntry.price_per_ha : 0;
-    const unit = 'Hektar';
+    const { rate, unit } = getRate(job.service_type, job.location);
 
     // Fetch flight log content if exists
     let flightLogText = 'No text content';
@@ -657,7 +802,8 @@ async function viewReport(id) {
                 <p><strong>Lot/Blok:</strong> ${job.lot_no || '-'} / ${job.block_no || '-'}</p>
                 <p><strong>Jenis Tanaman:</strong> ${job.jenis_tanaman || '-'}</p>
                 <p><strong>Variety:</strong> ${job.variety || '-'}</p>
-                <p><strong>Keluasan:</strong> ${job.total_area || '0'} Hektar</p>
+                <p><strong>Keluasan:</strong> ${job.total_area || '0'} ${unit}</p>
+                <p><strong>Lokasi:</strong> ${job.location || 'Selangor'}</p>
                 <p><strong>Team Terlibat:</strong> ${job.involved_team || '-'}</p>
                 <p style="font-size: 1.1rem; color: var(--primary); margin-top: 1rem;"><strong>JUMLAH HARGA: RM ${(job.total_price || 0).toFixed(2)}</strong></p>
             </div>
@@ -754,10 +900,20 @@ window.onload = async () => {
     initDateTimeValidation();
 
     // Initial data fetch
+    regionsList = await fetchRegions();
+    populateLocationSelectors();
+
     jobs = await fetchJobs();
     pricingList = await fetchPricing();
 
     renderDashboard();
     renderPricing();
     syncServiceDropdown();
+
+    // Set initial unit label
+    handleLocationChange();
+
+    // Listen for service/location changes to update labels
+    document.getElementById('service-type').addEventListener('change', handleLocationChange);
+    document.getElementById('location-select').addEventListener('change', handleLocationChange);
 };
