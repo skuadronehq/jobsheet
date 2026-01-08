@@ -135,13 +135,17 @@ function switchView(view) {
 
 function handleLocationChange() {
     const locationName = document.getElementById('location-select').value;
-    const region = regionsList.find(r => r.name === locationName);
+    const serviceType = document.getElementById('service-type').value;
+    const { unit } = getRate(serviceType, locationName);
+
     const areaLabel = document.getElementById('area-label');
     const areaInput = document.getElementById('total-area');
 
-    if (region) {
-        areaLabel.innerText = `Keluasan (${region.unit})`;
-        areaInput.placeholder = region.unit === 'Hektar' ? 'Contoh: 2.5' : 'Contoh: 3.5';
+    if (areaLabel) {
+        areaLabel.innerText = `Keluasan / Kuantiti (${unit})`;
+    }
+    if (areaInput) {
+        areaInput.placeholder = unit === 'Hektar' ? 'Contoh: 2.5' : (unit === 'Relong' ? 'Contoh: 3.5' : 'Contoh: 10');
     }
 }
 
@@ -151,7 +155,10 @@ function getRate(serviceType, locationName) {
     // Safety check: if no region selected/found, try to find a global price or default to 0
     if (!region) {
         const pricing = pricingList.find(p => p.service_name === serviceType && !p.region_id);
-        return { rate: pricing ? (pricing.price_per_ha || 0) : 0, unit: 'Hektar' };
+        return {
+            rate: pricing ? (pricing.price_per_ha || 0) : 0,
+            unit: pricing && pricing.unit ? pricing.unit : 'Hektar'
+        };
     }
 
     const pricing = pricingList.find(p => p.service_name === serviceType && p.region_id === region.id);
@@ -163,7 +170,7 @@ function getRate(serviceType, locationName) {
 
     return {
         rate: pricing ? (pricing.price_per_ha || 0) : 0,
-        unit: region.unit || 'Hektar'
+        unit: (pricing && pricing.unit) ? pricing.unit : (region.unit || 'Hektar')
     };
 }
 
@@ -532,7 +539,7 @@ function renderPricing() {
         tr.innerHTML = `
             <td><input type="text" value="${p.service_name}" onchange="updatePricing('${p.id}', 'service_name', this.value)"></td>
             <td><input type="number" value="${p.price_per_ha}" onchange="updatePricing('${p.id}', 'price_per_ha', this.value)"></td>
-            <td><input type="text" value="${unit}" disabled></td>
+            <td><input type="text" value="${p.unit || unit}" onchange="updatePricing('${p.id}', 'unit', this.value)" placeholder="${unit}"></td>
             <td><button class="btn-secondary" onclick="removePricing('${p.id}')">Delete</button></td>
         `;
         body.appendChild(tr);
