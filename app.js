@@ -835,8 +835,9 @@ async function viewReport(id) {
 
     reportDoc.innerHTML = `
         <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 1rem; margin-bottom: 2rem;">
+            <img src="logo.png" alt="Skuadrone Logo" style="max-width: 200px; margin-bottom: 1rem;">
             <h1 style="color: var(--primary); letter-spacing: 2px;">JOB SERVICE REPORT</h1>
-            <p style="color: var(--text-secondary);">SKUADRONE | ID: ${job.id}</p>
+            <p style="color: var(--text-secondary);">ID: ${job.id}</p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
