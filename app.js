@@ -880,9 +880,8 @@ async function viewReport(id) {
             <h4 style="color: var(--primary); margin-bottom: 1rem;">D. PENGESAHAN & KOS</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <p><strong>Status:</strong> <span class="badge badge-${job.status.toLowerCase()}">${job.status}</span></p>
-                <p><strong>Anggaran Kos:</strong> RM ${rate.toFixed(2)} (${unit})</p>
-                <p><strong>Diluluskan Oleh:</strong> ${job.approver_name}</p>
                 <p><strong>Tarikh Lulus:</strong> ${job.approval_date}</p>
+                <p><strong>Diluluskan Oleh:</strong> ${job.approver_name}</p>
             </div>
         </div>
 
