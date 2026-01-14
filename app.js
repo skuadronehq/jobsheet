@@ -458,12 +458,18 @@ function renderDashboard() {
     const body = document.getElementById('jobs-body');
     body.innerHTML = '';
 
+    // Get filter value (default to Pending)
+    const statusFilter = document.getElementById('jobs-status-filter')?.value || 'Pending';
+
     let pending = 0;
     let completed = 0;
 
     jobs.forEach(job => {
         if (job.status === 'Pending') pending++;
         if (job.status === 'Approved') completed++;
+
+        // Apply filter
+        if (statusFilter !== 'All' && job.status !== statusFilter) return;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `

@@ -236,6 +236,17 @@
                     </div>
 
                     <div id="tab-jobs">
+                        <div class="input-group"
+                            style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); padding: 1rem; border-radius: 12px;">
+                            <label style="margin: 0; white-space: nowrap;">Filter Status:</label>
+                            <select id="jobs-status-filter" onchange="renderDashboard()"
+                                style="width: auto; min-width: 150px;">
+                                <option value="Pending" selected>Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="All">All</option>
+                            </select>
+                        </div>
                         <table id="jobs-table">
                             <thead>
                                 <tr>
