@@ -257,6 +257,10 @@ function addServiceRow() {
     const region = regionsList.find(r => r.name === location);
     const unit = region ? region.unit : 'Unit';
 
+    // Get rounded value from Keluasan field
+    const areaValue = parseFloat(document.getElementById('total-area').value) || 0;
+    const roundedQty = Math.round(areaValue);
+
     const tbody = document.getElementById('services-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -265,7 +269,7 @@ function addServiceRow() {
                 ${getServiceOptionsHTML()}
             </select>
         </td>
-        <td><input type="number" class="service-qty" placeholder="${unit}" step="0.01"></td>
+        <td><input type="number" class="service-qty" placeholder="${unit}" step="0.01" value="${roundedQty > 0 ? roundedQty : ''}"></td>
         <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeServiceRow(this)">X</button></td>
     `;
     tbody.appendChild(tr);
