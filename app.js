@@ -179,7 +179,7 @@ function populateLocationSelectors() {
     const pricingSelector = document.getElementById('pricing-region-select');
 
     if (selector) {
-        selector.innerHTML = regionsList.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        selector.innerHTML = regionsList.map(r => `<option value="${r.name}"${r.name === 'Selangor' ? ' selected' : ''}>${r.name}</option>`).join('');
     }
     if (pricingSelector) {
         pricingSelector.innerHTML = regionsList.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
