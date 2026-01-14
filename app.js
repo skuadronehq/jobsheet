@@ -782,7 +782,7 @@ async function confirmAction(status) {
         const updateData = {
             status: status,
             approver_name: name,
-            approval_date: new Date().toISOString().split('T')[0],
+            approval_date: new Date().toLocaleDateString('ms-MY'),
             flight_log_url: flight_log_url,
             screenshot_url: screenshot_url
         };
