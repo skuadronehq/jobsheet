@@ -205,7 +205,7 @@ function nextStep(step) {
     document.querySelector(`.dot[data-step="${currentStep}"]`).classList.add('active');
 
     if (currentStep === 3) {
-        populateMaterialsStep();
+        populateServicesStep();
     }
 
     if (currentStep === 4) {
@@ -223,51 +223,56 @@ function prevStep(step) {
     document.querySelector(`.dot[data-step="${currentStep}"]`).classList.add('active');
 }
 
-function populateMaterialsStep() {
-    const serviceType = document.getElementById('service-type').value;
-    const config = serviceConfig[serviceType] || { unit: 'Beg/Btl', defaultMaterials: [] };
+// Service Selection Step Logic
+function populateServicesStep() {
+    const location = document.getElementById('location-select').value;
+    const region = regionsList.find(r => r.name === location);
+    const unit = region ? region.unit : 'Unit';
 
-    // Update Header
-    document.getElementById('unit-header').innerText = `Quantity (${config.unit})`;
+    // Update Header with unit
+    document.getElementById('unit-header').innerText = `Kuantiti (${unit})`;
 
-    // Update Datalist
-    const datalist = document.getElementById('material-suggestions');
-    if (datalist) {
-        datalist.innerHTML = config.defaultMaterials.map(m => `<option value="${m}">`).join('');
-    }
-
-    // Clear and fill table
-    const tbody = document.getElementById('materials-body');
+    // Clear table and add first row
+    const tbody = document.getElementById('services-body');
     tbody.innerHTML = '';
-
-    if (config.defaultMaterials.length > 0) {
-        config.defaultMaterials.forEach(material => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="text" placeholder="e.g. NPK1" value="${material}" list="material-suggestions"></td>
-                <td><input type="number" placeholder="Value in ${config.unit}"></td>
-                <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeRow(this)">X</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
-    } else {
-        addRow();
-    }
+    addServiceRow();
 }
 
-// Material Table Logic
-function addRow() {
-    const serviceType = document.getElementById('service-type').value;
-    const config = serviceConfig[serviceType] || { unit: 'Beg/Btl' };
+function getServiceOptionsHTML() {
+    const location = document.getElementById('location-select').value;
+    const filteredPricing = pricingList.filter(p => {
+        const region = regionsList.find(r => r.id === p.region_id);
+        return region && region.name === location;
+    });
 
-    const tbody = document.getElementById('materials-body');
+    let optionsHTML = '<option value="">-- Pilih Perkhidmatan --</option>';
+    filteredPricing.forEach(p => {
+        optionsHTML += `<option value="${p.service_name}" data-rate="${p.price_per_ha}">${p.service_name} (RM ${p.price_per_ha})</option>`;
+    });
+    return optionsHTML;
+}
+
+function addServiceRow() {
+    const location = document.getElementById('location-select').value;
+    const region = regionsList.find(r => r.name === location);
+    const unit = region ? region.unit : 'Unit';
+
+    const tbody = document.getElementById('services-body');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" placeholder="Item Name" list="material-suggestions"></td>
-        <td><input type="number" placeholder="Value in ${config.unit}"></td>
-        <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeRow(this)">X</button></td>
+        <td>
+            <select class="service-select" style="width: 100%; padding: 0.5rem;">
+                ${getServiceOptionsHTML()}
+            </select>
+        </td>
+        <td><input type="number" class="service-qty" placeholder="${unit}" step="0.01"></td>
+        <td><button type="button" class="btn-secondary" style="padding: 0.5rem;" onclick="removeServiceRow(this)">X</button></td>
     `;
     tbody.appendChild(tr);
+}
+
+function removeServiceRow(btn) {
+    btn.parentElement.parentElement.remove();
 }
 
 function removeRow(btn) {
@@ -277,35 +282,46 @@ function removeRow(btn) {
 // Review Generation
 function generateReview() {
     const reviewContent = document.getElementById('review-content');
-    const materials = [];
-    document.querySelectorAll('#materials-body tr').forEach(tr => {
-        const inputs = tr.querySelectorAll('input');
-        if (inputs[0].value) {
-            materials.push(`${inputs[0].value}: ${inputs[1].value || 0}`);
+    const location = document.getElementById('location-select').value;
+    const area = parseFloat(document.getElementById('total-area').value) || 0;
+    const team = document.getElementById('involved-team').value || '-';
+
+    // Collect selected services
+    const selectedServices = [];
+    let totalPrice = 0;
+    document.querySelectorAll('#services-body tr').forEach(tr => {
+        const select = tr.querySelector('.service-select');
+        const qtyInput = tr.querySelector('.service-qty');
+        if (select && select.value) {
+            const serviceName = select.value;
+            const qty = parseFloat(qtyInput.value) || 0;
+            const selectedOption = select.options[select.selectedIndex];
+            const rate = parseFloat(selectedOption.dataset.rate) || 0;
+            const subtotal = qty * rate;
+            selectedServices.push({ name: serviceName, qty, rate, subtotal });
+            totalPrice += subtotal;
         }
     });
 
-    const serviceType = document.getElementById('service-type').value;
-    const area = parseFloat(document.getElementById('total-area').value) || 0;
-    const team = document.getElementById('involved-team').value || '-';
-    const location = document.getElementById('location-select').value;
-    const { rate, unit } = getRate(serviceType, location);
-    const totalPrice = area * rate;
+    const servicesHTML = selectedServices.length > 0
+        ? selectedServices.map(s => `${s.name}: ${s.qty} × RM${s.rate} = RM ${s.subtotal.toFixed(2)}`).join('<br>')
+        : 'Tiada perkhidmatan dipilih';
 
     reviewContent.innerHTML = `
         <p><strong>Lokasi:</strong> ${location}</p>
         <p><strong>Applicant:</strong> ${document.getElementById('name-applicant').value}</p>
         <p><strong>Date:</strong> ${document.getElementById('service-date').value}</p>
-        <p><strong>Service:</strong> ${serviceType} (Rate: RM ${rate}/${unit})</p>
-        <p><strong>Keluasan:</strong> ${area} ${unit}</p>
+        <p><strong>Keluasan:</strong> ${area}</p>
         <p><strong>Lot No:</strong> ${document.getElementById('lot-no').value || '-'}</p>
         <p><strong>Jenis Tanaman:</strong> ${document.getElementById('crop-type').value || '-'}</p>
         <p><strong>Variety:</strong> ${document.getElementById('variety').value || '-'}</p>
         <p><strong>Team Terlibat:</strong> ${team}</p>
-        <p><strong>Materials:</strong> ${materials.join(', ') || 'None'}</p>
+        <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 8px;">
+            <p><strong>Perkhidmatan:</strong></p>
+            <p style="margin-left: 1rem;">${servicesHTML}</p>
+        </div>
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--accent); font-size: 1.2rem;">
             <strong>Jumlah Harga Job Ini: RM ${totalPrice.toFixed(2)}</strong>
-            ${rate === 0 ? '<br><small style="color: #ff6b6b">⚠️ Price not set for this region/service.</small>' : ''}
         </div>
     `;
 }
@@ -314,23 +330,27 @@ function generateReview() {
 document.getElementById('job-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const materials = [];
-    document.querySelectorAll('#materials-body tr').forEach(tr => {
-        const inputs = tr.querySelectorAll('input');
-        if (inputs[0].value) {
-            materials.push({ name: inputs[0].value, qty: inputs[1].value || 0 });
+    // Collect selected services
+    const services = [];
+    let totalPrice = 0;
+    document.querySelectorAll('#services-body tr').forEach(tr => {
+        const select = tr.querySelector('.service-select');
+        const qtyInput = tr.querySelector('.service-qty');
+        if (select && select.value) {
+            const serviceName = select.value;
+            const qty = parseFloat(qtyInput.value) || 0;
+            const selectedOption = select.options[select.selectedIndex];
+            const rate = parseFloat(selectedOption.dataset.rate) || 0;
+            const subtotal = qty * rate;
+            services.push({ name: serviceName, qty, rate, subtotal });
+            totalPrice += subtotal;
         }
     });
 
     const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
     const location = document.getElementById('location-select').value;
-
-    const serviceType = document.getElementById('service-type').value;
     const area = parseFloat(document.getElementById('total-area').value) || 0;
-
-    const { rate } = getRate(serviceType, location);
-    const totalPrice = area * rate;
 
     const newJob = {
         id: jobId,
@@ -349,8 +369,8 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
         involved_team: document.getElementById('involved-team').value,
         total_price: totalPrice,
         service_date: document.getElementById('service-date').value,
-        service_type: serviceType,
-        materials: materials,
+        service_type: services.map(s => s.name).join(', '),
+        materials: services,
         status: 'Pending'
     };
 

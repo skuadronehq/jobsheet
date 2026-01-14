@@ -134,22 +134,8 @@
                                     <input type="date" id="service-date" required>
                                 </div>
                                 <div class="input-group">
-                                    <label>Jenis Perkhidmatan</label>
-                                    <select id="service-type" onchange="handleLocationChange()">
-                                        <option value="TABUR BAJA 20KG">TABUR BAJA 20KG</option>
-                                        <option value="TABUR BAJA 25-30KG">TABUR BAJA 25-30KG</option>
-                                        <option value="TABUR BENIH PADI">TABUR BENIH PADI</option>
-                                        <option value="RACUN ULAT">RACUN ULAT</option>
-                                        <option value="RACUN SIPUT">RACUN SIPUT</option>
-                                        <option value="RACUN RUMPUT">RACUN RUMPUT</option>
-                                        <option value="RACUN RUMPUT DALAM PADI">RACUN RUMPUT DALAM PADI</option>
-                                        <option value="TABUR KAPUR BUTIR">TABUR KAPUR BUTIR</option>
-                                        <option value="SEMBUR KAPUR CECAIR">SEMBUR KAPUR CECAIR</option>
-                                    </select>
-                                </div>
-                                <div class="input-group">
-                                    <label id="area-label">Keluasan (Hektar)</label>
-                                    <input type="number" id="total-area" step="0.01" placeholder="Contoh: 2.5">
+                                    <label id="area-label">Keluasan / Kuantiti</label>
+                                    <input type="number" id="total-area" step="0.01" placeholder="Contoh: 3.5">
                                 </div>
                                 <div class="input-group">
                                     <label>Team Terlibat</label>
@@ -162,35 +148,25 @@
                             </div>
                         </div>
 
-                        <!-- Step 3: Operasi & Bahan (Operations & Materials) -->
+                        <!-- Step 3: Perkhidmatan & Bahan -->
                         <div class="form-step" id="step-3">
-                            <h3 style="margin-bottom: 2rem; color: var(--primary);">D/E. Operasi & Bahan</h3>
+                            <h3 style="margin-bottom: 2rem; color: var(--primary);">D/E. Perkhidmatan & Bahan</h3>
                             <div style="margin-bottom: 2rem;">
-                                <label>Baja / Racun yang digunakan</label>
-                                <table id="materials-table">
+                                <label>Pilih Perkhidmatan (berdasarkan lokasi)</label>
+                                <table id="services-table">
                                     <thead>
                                         <tr>
-                                            <th>Item Name</th>
-                                            <th id="unit-header">Quantity (Beg/Btl)</th>
+                                            <th>Perkhidmatan</th>
+                                            <th id="unit-header">Kuantiti</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="materials-body">
-                                        <tr>
-                                            <td>
-                                                <input type="text" placeholder="e.g. NPK1" list="material-suggestions">
-                                            </td>
-                                            <td><input type="number" placeholder="0"></td>
-                                            <td><button type="button" class="btn-secondary" style="padding: 0.5rem;"
-                                                    onclick="removeRow(this)">X</button></td>
-                                        </tr>
+                                    <tbody id="services-body">
+                                        <!-- Dynamic rows added via JS -->
                                     </tbody>
                                 </table>
-                                <datalist id="material-suggestions">
-                                    <!-- Dynamic options added via JS -->
-                                </datalist>
                                 <button type="button" class="btn btn-secondary" style="margin-top: 1rem; width: 100%;"
-                                    onclick="addRow()">+ Add Material</button>
+                                    onclick="addServiceRow()">+ Tambah Perkhidmatan</button>
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
                                 <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Back</button>
