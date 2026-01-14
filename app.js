@@ -787,7 +787,7 @@ async function confirmAction(status) {
             screenshot_url: screenshot_url
         };
 
-        const { error } = await supabase
+        const { error } = await db
             .from('jobs')
             .update(updateData)
             .eq('id', job.id);
