@@ -347,7 +347,22 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
         }
     });
 
-    const jobId = 'JOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    // Generate running number ID
+    const { data: lastJob } = await db
+        .from('jobs')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+    let nextNumber = 1;
+    if (lastJob && lastJob.length > 0 && lastJob[0].id) {
+        const lastId = parseInt(lastJob[0].id, 10);
+        if (!isNaN(lastId)) {
+            nextNumber = lastId + 1;
+        }
+    }
+    const jobId = String(nextNumber).padStart(7, '0');
+
     const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
     const location = document.getElementById('location-select').value;
     const area = parseFloat(document.getElementById('total-area').value) || 0;
