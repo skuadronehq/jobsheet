@@ -412,8 +412,8 @@ document.getElementById('job-form').addEventListener('submit', async (e) => {
 
 function resetForm() {
     document.getElementById('job-form').reset();
-    document.getElementById('materials-body').innerHTML = '';
-    addRow();
+    document.getElementById('services-body').innerHTML = '';
+    addServiceRow();
     prevStep(1);
 }
 
