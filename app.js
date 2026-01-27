@@ -501,8 +501,8 @@ function renderDashboard() {
     // Get filter value (default to Pending)
     const statusFilter = document.getElementById('jobs-status-filter')?.value || 'Pending';
 
-    // Get sort value (default to new-to-old)
-    const dateSort = document.getElementById('jobs-date-sort')?.value || 'new-to-old';
+    // Get sort value (default to large-to-small)
+    const idSort = document.getElementById('jobs-id-sort')?.value || 'large-to-small';
 
     let pending = 0;
     let completed = 0;
@@ -519,14 +519,14 @@ function renderDashboard() {
         return job.status === statusFilter;
     });
 
-    // Sort jobs based on date
+    // Sort jobs based on REF ID
     filteredJobs = [...filteredJobs].sort((a, b) => {
-        const dateA = new Date(a.service_date || a.created_at);
-        const dateB = new Date(b.service_date || b.created_at);
-        if (dateSort === 'old-to-new') {
-            return dateA - dateB;
+        const idA = parseInt(a.id, 10) || 0;
+        const idB = parseInt(b.id, 10) || 0;
+        if (idSort === 'small-to-large') {
+            return idA - idB;
         } else {
-            return dateB - dateA;
+            return idB - idA;
         }
     });
 
@@ -570,19 +570,19 @@ function renderReports() {
     if (!body) return;
     body.innerHTML = '';
 
-    // Get sort value (default to new-to-old)
-    const dateSort = document.getElementById('reports-date-sort')?.value || 'new-to-old';
+    // Get sort value (default to large-to-small)
+    const idSort = document.getElementById('reports-id-sort')?.value || 'large-to-small';
 
     let processedJobs = jobs.filter(j => j.status !== 'Pending');
 
-    // Sort jobs based on completed/approval date
+    // Sort jobs based on REF ID
     processedJobs = [...processedJobs].sort((a, b) => {
-        const dateA = new Date(a.approval_date || a.service_date || a.created_at);
-        const dateB = new Date(b.approval_date || b.service_date || b.created_at);
-        if (dateSort === 'old-to-new') {
-            return dateA - dateB;
+        const idA = parseInt(a.id, 10) || 0;
+        const idB = parseInt(b.id, 10) || 0;
+        if (idSort === 'small-to-large') {
+            return idA - idB;
         } else {
-            return dateB - dateA;
+            return idB - idA;
         }
     });
 

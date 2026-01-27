@@ -246,11 +246,11 @@
                                 <option value="Rejected">Rejected</option>
                                 <option value="All">All</option>
                             </select>
-                            <label style="margin: 0; white-space: nowrap; margin-left: 1rem;">Sort Date:</label>
-                            <select id="jobs-date-sort" onchange="renderDashboard()"
+                            <label style="margin: 0; white-space: nowrap; margin-left: 1rem;">Sort ID:</label>
+                            <select id="jobs-id-sort" onchange="renderDashboard()"
                                 style="width: auto; min-width: 150px;">
-                                <option value="new-to-old" selected>New to Old</option>
-                                <option value="old-to-new">Old to New</option>
+                                <option value="large-to-small" selected>ID (Besar ke Kecil)</option>
+                                <option value="small-to-large">ID (Kecil ke Besar)</option>
                             </select>
                         </div>
                         <table id="jobs-table">
@@ -317,11 +317,11 @@
                     <div id="tab-reports" style="display: none;">
                         <div class="input-group"
                             style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); padding: 1rem; border-radius: 12px;">
-                            <label style="margin: 0; white-space: nowrap;">Sort Date:</label>
-                            <select id="reports-date-sort" onchange="renderReports()"
+                            <label style="margin: 0; white-space: nowrap;">Sort ID:</label>
+                            <select id="reports-id-sort" onchange="renderReports()"
                                 style="width: auto; min-width: 150px;">
-                                <option value="new-to-old" selected>New to Old</option>
-                                <option value="old-to-new">Old to New</option>
+                                <option value="large-to-small" selected>ID (Besar ke Kecil)</option>
+                                <option value="small-to-large">ID (Kecil ke Besar)</option>
                             </select>
                         </div>
                         <table id="reports-table">
