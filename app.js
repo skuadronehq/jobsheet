@@ -134,9 +134,12 @@ function switchView(view) {
 }
 
 function handleLocationChange() {
-    const locationName = document.getElementById('location-select').value;
-    const serviceType = document.getElementById('service-type').value;
-    const { unit } = getRate(serviceType, locationName);
+    const locationElement = document.getElementById('location-select');
+    if (!locationElement) return;
+
+    const locationName = locationElement.value;
+    const region = regionsList.find(r => r.name === locationName);
+    const unit = region ? region.unit : 'Hektar';
 
     const areaLabel = document.getElementById('area-label');
     const areaInput = document.getElementById('total-area');
@@ -147,6 +150,17 @@ function handleLocationChange() {
     if (areaInput) {
         areaInput.placeholder = unit === 'Hektar' ? 'Contoh: 2.5' : (unit === 'Relong' ? 'Contoh: 3.5' : 'Contoh: 10');
     }
+
+    // Refresh services table header and rows if they exist
+    const unitHeader = document.getElementById('unit-header');
+    if (unitHeader) {
+        unitHeader.innerText = `Kuantiti (${unit})`;
+    }
+
+    // Update placeholders in existing service rows
+    document.querySelectorAll('.service-qty').forEach(input => {
+        input.placeholder = unit;
+    });
 }
 
 function getRate(serviceType, locationName) {
@@ -334,80 +348,106 @@ function generateReview() {
 document.getElementById('job-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Collect selected services
-    const services = [];
-    let totalPrice = 0;
-    document.querySelectorAll('#services-body tr').forEach(tr => {
-        const select = tr.querySelector('.service-select');
-        const qtyInput = tr.querySelector('.service-qty');
-        if (select && select.value) {
-            const serviceName = select.value;
-            const qty = parseFloat(qtyInput.value) || 0;
-            const selectedOption = select.options[select.selectedIndex];
-            const rate = parseFloat(selectedOption.dataset.rate) || 0;
-            const subtotal = qty * rate;
-            services.push({ name: serviceName, qty, rate, subtotal });
-            totalPrice += subtotal;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+
+    try {
+        // Collect selected services
+        const services = [];
+        let totalPrice = 0;
+        document.querySelectorAll('#services-body tr').forEach(tr => {
+            const select = tr.querySelector('.service-select');
+            const qtyInput = tr.querySelector('.service-qty');
+            if (select && select.value) {
+                const serviceName = select.value;
+                const qty = parseFloat(qtyInput.value) || 0;
+                const selectedOption = select.options[select.selectedIndex];
+                const rate = parseFloat(selectedOption.dataset.rate) || 0;
+                const subtotal = qty * rate;
+                if (qty > 0) {
+                    services.push({ name: serviceName, qty, rate, subtotal });
+                    totalPrice += subtotal;
+                }
+            }
+        });
+
+        if (services.length === 0) {
+            alert('Sila pilih sekurang-kurangnya satu perkhidmatan dan masukkan kuantiti.');
+            return;
         }
-    });
 
-    // Generate running number ID
-    const { data: lastJob } = await db
-        .from('jobs')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Menghantar...';
 
-    let nextNumber = 1;
-    if (lastJob && lastJob.length > 0 && lastJob[0].id) {
-        const lastId = parseInt(lastJob[0].id, 10);
-        if (!isNaN(lastId)) {
-            nextNumber = lastId + 1;
+        // Generate running number ID
+        const { data: lastJob, error: fetchError } = await db
+            .from('jobs')
+            .select('id')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (fetchError) throw new Error('Gagal mendapatkan ID terakhir: ' + fetchError.message);
+
+        let nextNumber = 1;
+        if (lastJob && lastJob.length > 0 && lastJob[0].id) {
+            const lastId = parseInt(lastJob[0].id, 10);
+            if (!isNaN(lastId)) {
+                nextNumber = lastId + 1;
+            }
         }
+        const jobId = String(nextNumber).padStart(7, '0');
+
+        const applicantTypeArr = document.querySelectorAll('input[name="applicant-type"]');
+        let applicantType = 'Individu';
+        applicantTypeArr.forEach(radio => {
+            if (radio.checked) applicantType = radio.value;
+        });
+
+        const location = document.getElementById('location-select').value;
+        const area = parseFloat(document.getElementById('total-area').value) || 0;
+
+        const newJob = {
+            id: jobId,
+            location: location,
+            request_datetime: document.getElementById('date-request').value,
+            applicant_type: applicantType,
+            applicant_name: document.getElementById('name-applicant').value,
+            applicant_ic: document.getElementById('ic-no').value,
+            applicant_phone: document.getElementById('phone-no').value,
+            applicant_address: document.getElementById('address').value,
+            lot_no: document.getElementById('lot-no').value,
+            block_no: document.getElementById('block-no').value,
+            jenis_tanaman: document.getElementById('crop-type').value,
+            variety: document.getElementById('variety').value,
+            total_area: area,
+            involved_team: document.getElementById('involved-team').value,
+            total_price: totalPrice,
+            service_date: document.getElementById('service-date').value,
+            service_type: services.map(s => s.name).join(', '),
+            materials: services,
+            status: 'Pending'
+        };
+
+        const { error: insertError } = await db
+            .from('jobs')
+            .insert([newJob]);
+
+        if (insertError) throw new Error('Gagal menghantar permohonan: ' + insertError.message);
+
+        // Refresh local state and reset form
+        jobs = await fetchJobs();
+        alert('Permohonan berjaya dihantar! No Rujukan anda adalah: ' + jobId);
+        resetForm();
+        switchView('request');
+
+    } catch (err) {
+        console.error('Submission Error:', err);
+        alert('Ralat semasa menghantar: ' + err.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
-    const jobId = String(nextNumber).padStart(7, '0');
-
-    const applicantType = document.querySelector('input[name="applicant-type"]:checked').value;
-    const location = document.getElementById('location-select').value;
-    const area = parseFloat(document.getElementById('total-area').value) || 0;
-
-    const newJob = {
-        id: jobId,
-        location: location,
-        request_datetime: document.getElementById('date-request').value,
-        applicant_type: applicantType,
-        applicant_name: document.getElementById('name-applicant').value,
-        applicant_ic: document.getElementById('ic-no').value,
-        applicant_phone: document.getElementById('phone-no').value,
-        applicant_address: document.getElementById('address').value,
-        lot_no: document.getElementById('lot-no').value,
-        block_no: document.getElementById('block-no').value,
-        jenis_tanaman: document.getElementById('crop-type').value,
-        variety: document.getElementById('variety').value,
-        total_area: area,
-        involved_team: document.getElementById('involved-team').value,
-        total_price: totalPrice,
-        service_date: document.getElementById('service-date').value,
-        service_type: services.map(s => s.name).join(', '),
-        materials: services,
-        status: 'Pending'
-    };
-
-    const { data, error } = await db
-        .from('jobs')
-        .insert([newJob])
-        .select();
-
-    if (error) {
-        alert('Error submitting job: ' + error.message);
-        return;
-    }
-
-    // Refresh local state and reset form to beginning
-    jobs = await fetchJobs();
-    alert('Permohonan berjaya dihantar!');
-    resetForm();
-    switchView('request');
 });
 
 function resetForm() {
@@ -461,16 +501,36 @@ function renderDashboard() {
     // Get filter value (default to Pending)
     const statusFilter = document.getElementById('jobs-status-filter')?.value || 'Pending';
 
+    // Get sort value (default to new-to-old)
+    const dateSort = document.getElementById('jobs-date-sort')?.value || 'new-to-old';
+
     let pending = 0;
     let completed = 0;
 
+    // Count stats first
     jobs.forEach(job => {
         if (job.status === 'Pending') pending++;
         if (job.status === 'Approved') completed++;
+    });
 
-        // Apply filter
-        if (statusFilter !== 'All' && job.status !== statusFilter) return;
+    // Filter jobs based on status
+    let filteredJobs = jobs.filter(job => {
+        if (statusFilter === 'All') return true;
+        return job.status === statusFilter;
+    });
 
+    // Sort jobs based on date
+    filteredJobs = [...filteredJobs].sort((a, b) => {
+        const dateA = new Date(a.service_date || a.created_at);
+        const dateB = new Date(b.service_date || b.created_at);
+        if (dateSort === 'old-to-new') {
+            return dateA - dateB;
+        } else {
+            return dateB - dateA;
+        }
+    });
+
+    filteredJobs.forEach(job => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-family: monospace; color: var(--accent);">${job.id}</td>
@@ -510,7 +570,21 @@ function renderReports() {
     if (!body) return;
     body.innerHTML = '';
 
-    const processedJobs = jobs.filter(j => j.status !== 'Pending');
+    // Get sort value (default to new-to-old)
+    const dateSort = document.getElementById('reports-date-sort')?.value || 'new-to-old';
+
+    let processedJobs = jobs.filter(j => j.status !== 'Pending');
+
+    // Sort jobs based on completed/approval date
+    processedJobs = [...processedJobs].sort((a, b) => {
+        const dateA = new Date(a.approval_date || a.service_date || a.created_at);
+        const dateB = new Date(b.approval_date || b.service_date || b.created_at);
+        if (dateSort === 'old-to-new') {
+            return dateA - dateB;
+        } else {
+            return dateB - dateA;
+        }
+    });
 
     processedJobs.forEach(job => {
         const tr = document.createElement('tr');
@@ -965,7 +1039,7 @@ window.onload = async () => {
     // Set initial unit label
     handleLocationChange();
 
-    // Listen for service/location changes to update labels
-    document.getElementById('service-type').addEventListener('change', handleLocationChange);
-    document.getElementById('location-select').addEventListener('change', handleLocationChange);
+    // Listen for location changes to update labels
+    const locSelect = document.getElementById('location-select');
+    if (locSelect) locSelect.addEventListener('change', handleLocationChange);
 };
